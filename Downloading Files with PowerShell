@@ -1,0 +1,7 @@
+#requires -Version 3
+
+$Video = 'http://s3.amazonaws.com/akamai.netstorage/HD_downloads/BEAMextract_final_revB.wmv'
+$Destination = "$env:temp\nasavideo1.wmv"
+Invoke-WebRequest -Uri $Video -OutFile $Destination -UseBasicParsing
+
+Invoke-Item -Path $Destination
