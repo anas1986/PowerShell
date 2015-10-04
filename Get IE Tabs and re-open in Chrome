@@ -1,0 +1,11 @@
+$Urls = (New-Object -ComObject Shell.Application).Windows() | Where Name -eq "Internet Explorer" | Select LocationURL
+ 
+ForEach($Url in $Urls)
+{
+    If(![string]::IsNullOrEmpty($Url.LocationURL))
+    {
+        Start-Process "firefox.exe" $Url.LocationUrl
+    }
+}
+ 
+Stop-Process -Name "iexplore"
