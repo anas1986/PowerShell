@@ -4,7 +4,7 @@ ForEach($Url in $Urls)
 {
     If(![string]::IsNullOrEmpty($Url.LocationURL))
     {
-        Start-Process "firefox.exe" $Url.LocationUrl
+        Start-Process "chrome.exe" $Url.LocationUrl
     }
 }
  
