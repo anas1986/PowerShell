@@ -1,0 +1,5 @@
+(gcim Win32_OperatingSystem).LastBootUpTime
+
+#or
+
+Get-CimInstance -ClassName Win32_OperatingSystem | select LastBootUpTime
