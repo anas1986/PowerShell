@@ -1,0 +1,75 @@
+<#
+Launch a PowerShell console as an admin and enter the following:
+notepad $profile
+#>
+
+function Connect-AzureAD
+{
+  if(-not(Get-Module -name MSOnline)) {Import-Module MSOnline}
+
+  Write-Host "Connecting to Azure AD..."
+
+  $global:Cred = $host.ui.PromptForCredential("Office 365 Admin Credentials", "Please Enter Your Office 365 Admin Account & Password","","")
+
+  Connect-MsolService -Credential $global:Cred
+
+  $host.ui.RawUI.WindowTitle = "Connected to Office 365 as: " + $cred.username
+
+  Write-Host ""
+}
+
+function Connect-ExchangeOnline
+{
+  if(-not($Cred)) {Connect-AzureAD}
+
+  Write-Host "Connecting to Exchange Online..."
+
+  $global:SessionEXO = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri https://outlook.office365.com/powershell-liveid/ -Credential $global:Cred -Authentication Basic -AllowRedirection
+   
+  Import-PSSession $global:SessionEXO | Out-Null
+
+  Write-Host ""
+}
+
+function Connect-SkypeOnline
+{
+  if(-not($Cred)) {Connect-AzureAD}
+
+  Write-Host "Connecting to Skype for Business Online..."
+
+  if(-not(Get-Module -name LyncOnlineConnector)) {Import-Module LyncOnlineConnector}
+
+  $global:SessionSFB = New-CsOnlineSession -Credential $global:Cred
+
+  Import-PSSession $global:SessionSFB | Out-Null
+
+  Write-Host ""
+}
+
+function Connect-SharePointOnline
+{
+  if(-not($Cred)) {Connect-AzureAD}
+
+  Write-Host "Connecting to SharePoint Online..."
+
+  if(-not(Get-Module -name Microsoft.Online.Sharepoint.PowerShell)) {Import-Module Microsoft.Online.Sharepoint.PowerShell}
+
+  if ($cred.username -like "*.onmicrosoft.com") {
+    $Tenant = ($cred.username.Substring($cred.username.IndexOf("@") + 1)).Replace(".onmicrosoft.com","")
+  }
+  else {
+    $Tenant = Read-Host -Prompt 'Enter the Tenant Name (i.e. Enter "contoso" for "contoso.onmicrosoft.com")'
+  }
+
+  Connect-SPOService -url https://$Tenant-admin.sharepoint.com -Credential $global:Cred
+
+  Write-Host ""
+}
+
+function Connect-O365
+{
+  Connect-AzureAD
+  Connect-ExchangeOnline
+  Connect-SkypeOnline
+  Connect-SharePointOnline
+}
