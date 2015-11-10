@@ -1,0 +1,37 @@
+Import-module Hyper-V
+
+$VMs =@("Client01";"Client02";"Client03";"Client04")
+$Template = "D:\Virtualization\TEMPLATE\Windows10.vhdx"
+$Path = "D:\Virtualization\LAB"
+$Switch = "Internal"
+$Mem = 1024MB
+
+Foreach ($VM in $VMs) {
+
+$VHD = Get-VHD -Path "$Path\$VM\$VM.vhdx" -ErrorAction SilentlyContinue
+Write-Host "Creating VHD for VM $VM..." -NoNewline
+If ($VHD -eq $null) {
+New-VHD -ParentPath $Template -Path "$Path\$VM\$VM.vhdx" -Differencing | Out-Null
+Write-Host -ForegroundColor Green " - VHD creation for $LABVM Done."
+} else {
+Write-Host -ForegroundColor Gray " - Already Created"
+}
+
+$VM = Get-VM -Name $VM -ErrorAction SilentlyContinue
+
+Write-Host "Creating VM $VM..." -NoNewline
+If ($VM.Name -ne $VM) {
+New-VM -VHDPath "$Path\$VM\$VM.vhdx" -VMName $VM -MemoryStartupBytes $Mem -SwitchName $Switch | Out-Null
+Write-Host -ForegroundColor Green " - CONFIGURATION for $VM Done."
+} else {
+Write-Host -ForegroundColor Gray " - Already Created"
+}
+
+Write-Host "Starting VM $VM..." -NoNewline
+If ($VM.State -ne "Running") {
+Start-VM -Name $VM
+Write-Host -ForegroundColor Green " - Done."
+} else {
+Write-Host -ForegroundColor Gray " - Already Running"
+}
+}
