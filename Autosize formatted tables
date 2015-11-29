@@ -1,0 +1,1 @@
+$PSDefaultParameterValues.Add("format-table:autosize",$True)
