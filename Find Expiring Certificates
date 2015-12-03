@@ -1,0 +1,1 @@
+Get-ChildItem Cert:\LocalMachine\My\ -ExpiringInDays 30 | Select-Object Thumbprint, Subject, NotAfter
