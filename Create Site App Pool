@@ -1,0 +1,52 @@
+#Written for: Windows 2012 / IIS8+
+#Written by: Marc Creighton
+#Date: October 2015
+#USE AT YOUR OWN RISK
+
+Import-Module WebAdministration
+#Set AppPool name, .net version and managed pipeline mode variables
+$iisAppPoolName = "Governance_AppPool" 
+$iisAppPoolDotNetVersion = "v4.0"
+$managedPipelineMode = "Integrated"
+#Set website name and location
+$iisAppName = "Governance Site"
+$directoryPath = "E:\Inetpub\WWWRoot\Governance"
+#Set binding information
+$bindIP = "192.168.166.135"
+$bindingPort = "80"
+$hostHeader = "governance.contoso.com"
+$httpsBindingPort = "443"
+
+
+#All code below this line shouldn't need to be changed as it references the variables above
+#------------------------------------------------------------------------------------------
+
+#Create IIS Folder
+New-Item -Path $directoryPath -type directory -Force -ErrorAction SilentlyContinue
+
+#navigate to the app pools root
+cd IIS:\AppPools\
+
+#check if the app pool exists
+if (!(Test-Path $iisAppPoolName -pathType container))
+{
+    #create the app pool
+    $appPool = New-Item $iisAppPoolName
+    $appPool | Set-ItemProperty -Name "managedRuntimeVersion" -Value $iisAppPoolDotNetVersion
+}
+
+#navigate to the sites root
+cd IIS:\Sites\
+
+#check if the site exists
+if (Test-Path $iisAppName -pathType container)
+{
+    return
+}
+
+#create the site and appPool with site binding information
+$iisApp = New-Item $iisAppName -bindings @{protocol="http";bindingInformation=$bindIP + ":"+ $bindingPort + ":" + $hostHeader},
+@{protocol="https";bindingInformation=$bindIP + ":"+ $httpsBindingPort + ":" + $hostHeader} -physicalPath $directoryPath
+$iisApp | Set-ItemProperty -Name "applicationPool" -Value $iisAppPoolName
+#Set the appPool 'Managed Pipeline Mode'
+$appPool | set-itemproperty -Name "managedPipelineMode" -Value $managedPipelineMode
