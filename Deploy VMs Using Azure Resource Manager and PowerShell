@@ -1,0 +1,59 @@
+Login-AzureRmAccount
+
+$subs = Get-AzureRmSubscription 
+Select-AzureRmSubscription -TenantId $subs[0].TenantId -SubscriptionId $subs[0].SubscriptionId
+$rgName ='ContosoSRVs' 
+$location = 'North Europe'
+$vnetName = 'CONTOSO' 
+$ipAddress = '10.0.0.7' 
+$Range = '10.0.0.0/16' 
+$subNetRange = '10.0.0.0/24' 
+$subnetname = 'Subnet-1'
+$vmSize = 'Basic_A0'  
+$osSKU = '2012-R2-Datacenter' 
+$vmName = 'contososrv1' 
+$storaccName = $vmName + 'stor'
+ 
+# Usernames and passwords
+ 
+$username = 'sysadmin' 
+$password = 'P@ssw0rd!'
+$passwordsec = convertto-securestring $password -asplaintext -force 
+$creds = New-Object System.Management.Automation.PSCredential($username, $passwordsec)
+try {     
+    Get-AzureRmResourceGroup -Name $rgName -Location $location -ErrorAction Stop     
+    Write-Host 'RG already exists... skipping' -foregroundcolor yellow -backgroundcolor red 
+} catch {     
+New-AzureRmResourceGroup -Name $rgName -Location $location 
+}
+if (Test-AzureName -Storage $storaccName) 
+{
+    Throw 'Storage account already name exists... aborting'
+} else { New-AzureRmStorageAccount -Name $storaccName -ResourceGroupName $rgName –Type 'Standard_LRS' -Location $location }
+$storacct = Get-AzureRmStorageAccount -ResourceGroupName $rgName –StorageAccountName $storaccName 
+$disknameOS = $vmname + 'diskOS' 
+$vhduri = $storacct.PrimaryEndpoints.Blob.OriginalString + 'vhds/${disknameOS}.vhd'
+$images = Get-AzureRmVMImage -Location $location -PublisherName 'MicrosoftWindowsServer' -Offer 'WindowsServer' -Skus $osSKU | Sort-Object -Descending -Property PublishedDate
+$pip = New-AzureRmPublicIpAddress -Name "${vmname}_nic1" -ResourceGroupName $rgName -DomainNameLabel $vmName -Location $location -AllocationMethod Dynamic
+$subnet1 = New-AzureRmVirtualNetworkSubnetConfig -Name $subnetname -AddressPrefix $subNetRange
+try {     
+    $vnet = Get-AzureRmVirtualNetwork -Name $vnetName -ResourceGroupName $rgName -ErrorAction Stop     
+    Write-Host 'VNET already exists... skipping' -foregroundcolor yellow -backgroundcolor red 
+} catch {     
+    $vnet = New-AzureRmVirtualNetwork -Name $vnetName -ResourceGroupName $rgName -Location $location -AddressPrefix $Range -Subnet $subnet1 
+}
+$subnet = Get-AzureRmVirtualNetworkSubnetConfig -VirtualNetwork $vnet
+$nic = New-AzureRmNetworkInterface -Name "${vmname}_nic1" -Location $location -ResourceGroupName $rgName -SubnetId $vnet.Subnets[0].Id -PublicIpAddressId $pip.Id
+$newVM = New-AzureRmVMConfig -Name $vmName -VMSize $vmSize 
+$newVM = Add-AzureRmVMNetworkInterface -VM $newVM -Id $nic.Id
+
+Set-AzureRmVMOperatingSystem -Windows -VM $newVM -ProvisionVMAgent -EnableAutoUpdate -Credential $creds -ComputerName $vmname 
+Set-AzureRmVMSourceImage -VM $newVM -PublisherName $images[0].PublisherName -Offer $images[0].Offer -Skus $images[0].Skus -Version $images[0].Version 
+Set-AzureRmVMOSDisk -VM $newVM -Name $disknameOS -VhdUri $vhduri -Caching ReadWrite -CreateOption fromImage
+
+New-AzureRmVM -ResourceGroupName $rgName -Location $location -VM $newVM -Verbose
+$rdpVM = get-azurermvm -ResourceGroupName $rgName -Name $vmName
+ 
+$rdpString = $vmName + '.' + $rdpVM.Location + '.cloudapp.azure.com:3389' 
+Write-Host 'Connect to the VM using the URL below:' -foregroundcolor yellow -backgroundcolor red 
+Write-Host $rdpString
