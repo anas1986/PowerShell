@@ -1,0 +1,3 @@
+$source = Get-ChildItem -Path 'D:\...'
+$dest = Get-ChildItem -Path 'Z:\...'
+Compare-Object -ReferenceObject $source.name -DifferenceObject $dest.name
